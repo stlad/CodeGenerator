@@ -19,6 +19,9 @@ def b():
 def w():
     return np.ones((1,3))
 
+def grey():
+    return np.ones((1,3)) * 0.5
+
 class QRDrawer:
     def __init__(self):
         version = 7
@@ -36,8 +39,27 @@ class QRDrawer:
             self.place_and_parse_version_code(canv,version)
 
         self.place_mask_codes(canv)
+
+        #self.fill_QR(canv)
         self.save_image(canv)
         return
+
+
+
+    def prepare_data(self,canv):
+        for i in range(canv.shape[0], 9,-1):
+            for j in range (canv.shape[1]):
+                return
+        res = [[canv.shape[1]-1, canv.shape[0]-1, np.array([255,100,255])]]
+        return res
+
+    def fill_QR(self,canv):
+        mapdata = self.prepare_data(canv)
+        for pix in mapdata:
+            x,y, col = pix[0], pix[1], pix[2]
+            canv[x,y] = col
+        return canv
+
 
     def place_leveling_patterns(self, canv, version):
         positions = leveling_pattern_positions[version]
@@ -59,17 +81,18 @@ class QRDrawer:
         delta = 6
         while i< canv.shape[0]-7:
             if canv[delta,i][0]==0:
-                i+=6
+                i+=5
                 continue
             canv[delta,i] = b() if i%2==0 else w()
             i+=1
         i=8
         while i< canv.shape[1]-7:
             if canv[i,delta][0]==0:
-                i+=6
+                i+=5
                 continue
             canv[i,delta] = b() if i%2==0 else w()
             i+=1
+
         return canv
 
     def place_and_parse_version_code(self, canv, version):
@@ -90,7 +113,7 @@ class QRDrawer:
     def _get_canvas_by_version(self, version):
         start = 21
         size = 21+ 4*(version-1)
-        canv = np.ones((size,size,3))
+        canv = np.ones((size,size,3))*0.5
         ''''''
         self.canvas = canv
         return canv
@@ -159,14 +182,17 @@ class QRDrawer:
         self.place_at(canv, pattern,0,0)
         self.place_at(canv, pattern, 0, canv.shape[1]-7)
         self.place_at(canv, pattern,canv.shape[1]-7,0)
-        #self.place_at(canv, pattern, 0, 0)
-
-
+        canv[:8,7] = w()
+        canv[7,:8] = w()
+        canv[canv.shape[0] -8, :8] = w()
+        canv[7,canv.shape[1] -8:] = w()
+        canv[:8,canv.shape[0] -8] = w()
+        canv[canv.shape[0]-7:,7] = w()
 
     def save_image(self, canv):
         im = Image.fromarray((canv*255).astype(np.uint8))
         print(canv.size)
-        im.save('canv.jpg')
+        im.save('canv.bmp')
 
 
 d  =QRDrawer()
