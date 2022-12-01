@@ -48,10 +48,10 @@ from code128 import *
 import copy
 
 
-coder = Code128()
-code = coder.Encode("Fly me to the moon")
+#coder = Code128()
+#code = coder.Encode("Fly me to the moon")
 
-def DrawCode128(code):
+def DrawCode128(code, filename):
     code = np.array(code)
     height = 100
     new = np.ones((3, height, code.shape[0]))
@@ -59,6 +59,6 @@ def DrawCode128(code):
     bb = b.transpose(1, 2, 0)
     im = Image.fromarray(((bb-1) * (-255)).astype(np.uint8))
     img = im.resize((bb.shape[1]*2, bb.shape[0]*2))
-    img.save('res.bmp')
+    img.save(filename)
 
-DrawCode128(code)
+#DrawCode128(code)

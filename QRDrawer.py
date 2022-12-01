@@ -190,13 +190,13 @@ class QRDrawer:
 
     def prep_msg(self,canv,code):
         empty_cnt = 0
-        print(code)
+        #print(code)
         for i in range(canv.shape[0]):
             for j in range(canv.shape[1]):
                 if canv[i,j][0]==0.5:
                     empty_cnt+=1
         code+='0'*(empty_cnt-len(code))
-        print(code)
+        #print(code)
         return code
 
     def traverse(self,canv,code):
@@ -239,9 +239,3 @@ class QRDrawer:
         return canv
 
 
-
-d = QRCodeL()
-r = d.Encode('HELLO')
-print(r)
-print(d.version)
-drawer  = QRDrawer(r,d.version,'mycode.bmp')
