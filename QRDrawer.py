@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from QRTables import leveling_pattern_positions, version_codes
-
+from QRCode import QRCodeL
 
 
 def get_bigramms(arr):
@@ -23,14 +23,12 @@ def grey():
     return np.ones((1,3)) * 0.5
 
 class QRDrawer:
-    def __init__(self):
-        version = 7
+    def __init__(self, code, version):
+
         canv = self._get_canvas_by_version(version)
         lvl = self.get_leveling_pattern()
         fnd = self.get_finding_pattern()
 
-        #self.place_at(canv, lvl, 0,0)
-        #self.place_at(canv, fnd, 10,10)
         self.place_finding_patterns(canv)
         self.place_leveling_patterns(canv, version)
         self.place_synch_lines(canv)
@@ -40,7 +38,11 @@ class QRDrawer:
 
         self.place_mask_codes(canv)
 
-        #self.fill_QR(canv)
+
+        code = self.prep_msg(canv,code)
+
+        self.traverse(canv,code)
+        canv = self.add_padding(canv)
         self.save_image(canv)
         return
 
@@ -52,13 +54,6 @@ class QRDrawer:
                 return
         res = [[canv.shape[1]-1, canv.shape[0]-1, np.array([255,100,255])]]
         return res
-
-    def fill_QR(self,canv):
-        mapdata = self.prepare_data(canv)
-        for pix in mapdata:
-            x,y, col = pix[0], pix[1], pix[2]
-            canv[x,y] = col
-        return canv
 
 
     def place_leveling_patterns(self, canv, version):
@@ -126,7 +121,7 @@ class QRDrawer:
 
     def _place_mask_codes_sec(self, canv):
         mask_id =0
-        mask_code = '111011111000100'
+        mask_code ='111011111000100' #'111011111000100'
         for i in range(0,7):
             col = b if mask_code[i]=='1' else w
             canv[canv.shape[1]-1-i,8] = col()
@@ -143,7 +138,7 @@ class QRDrawer:
     def _place_mask_codes_first(self,canv):
 
         mask_id =0
-        mask_code = '111011111000100'
+        mask_code = '111011111000100'#'111011111000100'
         for i in range(0,6):
             col = b if mask_code[i]=='1' else w
             canv[8,i] = col()
@@ -191,9 +186,82 @@ class QRDrawer:
 
     def save_image(self, canv):
         im = Image.fromarray((canv*255).astype(np.uint8))
-        print(canv.size)
+        #print(canv.size)
         im.save('canv.bmp')
 
+    def prep_msg(self,canv,code):
+        print(len(code))
+        empty_cnt = 0
+        for i in range(canv.shape[0]):
+            for j in range(canv.shape[1]):
+                if canv[i,j][0]==0.5:
+                    empty_cnt+=1
+        code+='0'*(empty_cnt-len(code))
+        return code
 
-d  =QRDrawer()
+    def traverse(self,canv,code):
+        col_dir = True #true - up, false - down
+        symb_pos =0 #0 - right, 1 - left
+        print(len(code))
+        print(canv.shape[1]**2)
+        index=0
+        for col in range(canv.shape[1]-1, -1,-2):
+            if col_dir:
+                for row in range(canv.shape[0]-1,-1,-1):
+                    if canv[row,col][0]==0.5:
+                        s = code[index]
+                        color = b if code[index]=='1' else w
+                        color = self.mask(row,col,color)
+                        canv[row,col]=color()#np.array([0.2,0.2,0.8])#
+                        index+=1
+                    if canv[row,col-1][0]==0.5:
+                        color = b if code[index]=='1' else w
+                        color = self.mask(row,col,color)
+                        canv[row,col-1]=color()#np.array([0.8,0.2,0.8])#color()
+                        index+=1
+            else:
+                for row in range(0,canv.shape[0]):
+                    if canv[row,col][0]==0.5:
+                        color = b if code[index] == '1' else w
+                        color = self.mask(row,col,color)
+                        canv[row,col]=color()#np.array([0.2,0.8,0.8])#color()
+                        index+=1
+                    if canv[row,col-1][0]==0.5:
+                        color = b if code[index] == '1' else w
+                        color = self.mask(row,col,color)
+                        canv[row, col-1]=color()#np.array([0.4,0.8,0.4])#color()
+                        index+=1
+            col_dir = not col_dir
+
+    def mask(self,row,col,color):
+        rev= (row+1+col+1) %2 ==0
+        #rev = row%3 ==0
+        if rev:
+           return b if color==w else w
+        return color
+
+
+    def add_padding(self,canv,pad_size=4):
+        res = np.ones((canv.shape[0]+pad_size*2,canv.shape[1]+pad_size*2,3))
+        #res[pad_size-1:canv.shape[0],pad_size-1:canv.shape[0] ] = canv
+        canv = self.place_at(res,canv,pad_size,pad_size)
+        return canv
+
+
+
+
+#d = QRCodeL()
+#r = d.Encode('1')
+#r = d.Encode('HELLO')
+#drawer  = QRDrawer(r,d.version)
+#drawer  = QRDrawer(r,d.version)
 #d.get_finding_pattern()
+
+
+from c import encode
+
+s = 'fly me to the moon'
+v, datacode = encode(1, 'L', s)
+data = ''.join([bin(i)[2:] for i in datacode[0]])
+print(data)
+drawer  = QRDrawer(data,v)

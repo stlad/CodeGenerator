@@ -59,6 +59,6 @@ def DrawCode128(code):
     bb = b.transpose(1, 2, 0)
     im = Image.fromarray(((bb-1) * (-255)).astype(np.uint8))
     img = im.resize((bb.shape[1]*2, bb.shape[0]*2), Image.LANCZOS )
-    img.save('res.jpg')
+    img.save('res.bmp')
 
 DrawCode128(code)

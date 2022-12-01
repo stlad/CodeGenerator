@@ -1,7 +1,6 @@
 from QRTables import polinoms, Gauls_Pole,ReverseGaulsField
 from copy import copy
 
-
 class QRCodeL:
     '''QR код уровня коррекции L (допускает до 7% потерь)'''
     def __init__(self):
@@ -13,8 +12,12 @@ class QRCodeL:
 
     def Encode(self, msg):
         size = len(msg)
-        code = self._get_code_by_bigramms(msg)
+        #code = self._get_code_by_bigramms(msg)
+        code= self._byte_coding(msg)
         self.version = self._get_qrversion(code)
+        if self.version>40:
+            print('НЕ поддерживается версия больше 40овой')
+            return
         code = self._add_encoding_method(code, size)
         code = self._fill_to_mod_8(code)
         code = self._fill_to_version_req(code)
@@ -25,7 +28,15 @@ class QRCodeL:
         byte_blocks = self._blocks_to_byte_arrays(blocks)
         inf_bytes, cor_bytes = self._get_corrected_blocks(byte_blocks, correction_polinom, cor_bytes_cnt)
         byteline = self._blocks_to_byte_line(inf_bytes,cor_bytes)
-        print(self.version)
+
+        return ''.join([bin(num)[2:] for num in byteline])
+
+    def _byte_coding(self,msg):
+        res = []
+        for i in msg:
+            res.append('0' + bin(ord(i))[2:])
+        return ''.join(res)
+
 
     def _get_code_by_bigramms(self, msg):
         res = []
@@ -34,7 +45,9 @@ class QRCodeL:
                 code =self.codetabe.index(msg[i]) * 45 + self.codetabe.index(msg[i+1])
             else:
                 code = self.codetabe.index(msg[i])
-            res.append(bin(code)[2:])
+
+            strcode = '0'*(11-len(bin(code)[2:]))+bin(code)[2:] if  i+1<len(msg) else '0'*(6-len(bin(code)[2:]))+bin(code)[2:]
+            res.append(strcode)
         return ''.join(res)
 
     def _get_qrversion(self,binmsg):
@@ -45,13 +58,15 @@ class QRCodeL:
 
     def _add_encoding_method(self, binmsg, size):
         if self.version in range(1,9):
-            bit_window = 9
-        elif self.version in range(10,26):
-            bit_window = 11
+            bit_window = 8
+        elif self.version in range(10,27):
+            bit_window = 16
         else:
-            bit_window = 13
+            bit_window = 16
         data_count_str = '0'*(bit_window-len(bin(size)[2:])) + bin(size)[2:]
-        return '0010'+ data_count_str + str(binmsg)  #Так как использую буквенно-цифровое кодирование
+        #return '0010'+ data_count_str + str(binmsg)  #Так как использую буквенно-цифровое кодирование
+        e = '0'*(8-len(bin(bit_window)[2:])) + bin(bit_window)[2:]
+        return '0100'+ e + str(binmsg)  #Так как использую побайтовое кодирование
 
     def _fill_to_mod_8(self, binmsg):
         left_bit_count = 8-(len(binmsg)%8)
@@ -111,37 +126,38 @@ class QRCodeL:
             res.append(byte_block)
         return res
 
-    def _get_corrected_blocks(self, blocks,polinom, cor_bytes_cnt):
+    def _get_corrected_blocks(self, blocks, polinom, cor_bytes_cnt):
         inf_blocks_in_line = []
         cor_blocks_in_line = []
         for block in blocks:
-            cblock = copy(block)
-            for i in range(0,len(cblock),cor_bytes_cnt):
-                prep_block =cblock[i:i+cor_bytes_cnt]
+            prep_block = copy(block)
+            inf_byte_cnt = len(prep_block)
+            #if cor_bytes_cnt != len(prep_block): #ДОБИТЬ БЛОК НУЛЯМИ, если он слишком мал для байтов коррекции
+            #    prep_block+=[0]*(cor_bytes_cnt-len(prep_block))
+            prep_block+=[0]*(max(len(prep_block), cor_bytes_cnt)-len(prep_block))
+            inf_blocks_in_line.append(copy(prep_block))
 
+            for i in range(inf_byte_cnt):
                 if cor_bytes_cnt != len(prep_block): #ДОБИТЬ БЛОК НУЛЯМИ, если он слишком мал для байтов коррекции
                     prep_block+=[0]*(cor_bytes_cnt-len(prep_block))
 
-                inf_blocks_in_line.append(prep_block)
-
                 a = prep_block[0]
                 prep_block= prep_block[1:]
-                prep_block.append(0)
+                prep_block+=[0]
                 if a==0:
                     continue
-                b=ReverseGaulsField[a]
-                pol = copy(polinom)
-                newpol = [(i + b)%255 for i in pol]
-                gaulspol = [Gauls_Pole[i] for i in newpol]
-                correction_block = [prep_block[i] ^ gaulspol[i] for i in range(len(gaulspol))]
-
-                cor_blocks_in_line.append(correction_block)
+                b = ReverseGaulsField[a]
+                for j in range(cor_bytes_cnt):
+                    v = (polinom[j]+b)%255
+                    prep_block[j]= prep_block[j] ^ Gauls_Pole[v]
+            cor_blocks_in_line.append(copy(prep_block))
         return inf_blocks_in_line, cor_blocks_in_line
+
 
     def _blocks_to_byte_line(self, inf, cor):
         resline = []
-        print(inf)
-        print(cor)
+        #print(inf)
+        #print(cor)
         for i in range(len(inf[0])):
             for j in range(len(inf)):
                 resline.append(inf[j][i])
@@ -152,5 +168,14 @@ class QRCodeL:
         return resline
 
 
-#s = QRCodeL().Encode('HELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLO')
-#d = QRCodeL().Encode('FLY ME TO THE MOON AND LET ME PLAY ALOMG THE STARS')
+#s = QRCodeL().Encode('FLY ME TO THE MOON AND LET ME PLAY ALOMG THE STARS')
+#print(ord('1'))
+'''s = QRCodeL()._get_corrected_blocks([[64, 196, 132 , 84 ,196 ,196,242 ,194  , 4 ,132, 20 , 37 , 34 , 16, 236 , 17]],
+                                    [168, 223, 200, 104, 224, 234, 108, 180, 110, 190, 195, 147, 205, 27, 232, 201, 21, 43, 245, 87, 42, 195, 212, 119, 242, 37, 9, 123],
+                                    28)'''
+
+#print(1)
+#d = QRCodeL()
+#r = d.Encode('FLY ME TO THE MOON AND LET ME PLAY ALOMG THE STARS')
+#print(len(r))
+#print(d.version)
