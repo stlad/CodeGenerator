@@ -23,7 +23,7 @@ def grey():
     return np.ones((1,3)) * 0.5
 
 class QRDrawer:
-    def __init__(self, code, version):
+    def __init__(self, code, version, filename):
 
         canv = self._get_canvas_by_version(version)
         lvl = self.get_leveling_pattern()
@@ -43,7 +43,7 @@ class QRDrawer:
 
         self.traverse(canv,code)
         canv = self.add_padding(canv)
-        self.save_image(canv)
+        self.save_image(canv, filename)
         return
 
 
@@ -121,7 +121,7 @@ class QRDrawer:
 
     def _place_mask_codes_sec(self, canv):
         mask_id =0
-        mask_code ='111011111000100' #'111011111000100'
+        mask_code ='111011111000100'
         for i in range(0,7):
             col = b if mask_code[i]=='1' else w
             canv[canv.shape[1]-1-i,8] = col()
@@ -138,7 +138,7 @@ class QRDrawer:
     def _place_mask_codes_first(self,canv):
 
         mask_id =0
-        mask_code = '111011111000100'#'111011111000100'
+        mask_code = '111011111000100'
         for i in range(0,6):
             col = b if mask_code[i]=='1' else w
             canv[8,i] = col()
@@ -184,62 +184,53 @@ class QRDrawer:
         canv[:8,canv.shape[0] -8] = w()
         canv[canv.shape[0]-7:,7] = w()
 
-    def save_image(self, canv):
+    def save_image(self, canv, filname):
         im = Image.fromarray((canv*255).astype(np.uint8))
-        #print(canv.size)
-        im.save('canv.bmp')
+        im.save(filname)
 
     def prep_msg(self,canv,code):
-        print(len(code))
         empty_cnt = 0
+        print(code)
         for i in range(canv.shape[0]):
             for j in range(canv.shape[1]):
                 if canv[i,j][0]==0.5:
                     empty_cnt+=1
         code+='0'*(empty_cnt-len(code))
+        print(code)
         return code
 
     def traverse(self,canv,code):
         col_dir = True #true - up, false - down
-        symb_pos =0 #0 - right, 1 - left
-        print(len(code))
-        print(canv.shape[1]**2)
         index=0
-        for col in range(canv.shape[1]-1, -1,-2):
+        for coll in range(canv.shape[1]-1, -1,-2):
+            if coll<=7:
+                col=coll-1
+            else:
+                col=coll
             if col_dir:
                 for row in range(canv.shape[0]-1,-1,-1):
                     if canv[row,col][0]==0.5:
-                        s = code[index]
-                        color = b if code[index]=='1' else w
-                        color = self.mask(row,col,color)
-                        canv[row,col]=color()#np.array([0.2,0.2,0.8])#
+                        canv[row,col]=self.get_pix_color_with_mask(row,col,code[index])
                         index+=1
                     if canv[row,col-1][0]==0.5:
-                        color = b if code[index]=='1' else w
-                        color = self.mask(row,col,color)
-                        canv[row,col-1]=color()#np.array([0.8,0.2,0.8])#color()
+                        canv[row,col-1]=self.get_pix_color_with_mask(row,col-1,code[index])
                         index+=1
             else:
                 for row in range(0,canv.shape[0]):
                     if canv[row,col][0]==0.5:
-                        color = b if code[index] == '1' else w
-                        color = self.mask(row,col,color)
-                        canv[row,col]=color()#np.array([0.2,0.8,0.8])#color()
+                        canv[row,col]=self.get_pix_color_with_mask(row,col,code[index])
                         index+=1
                     if canv[row,col-1][0]==0.5:
-                        color = b if code[index] == '1' else w
-                        color = self.mask(row,col,color)
-                        canv[row, col-1]=color()#np.array([0.4,0.8,0.4])#color()
+                        canv[row, col-1]=self.get_pix_color_with_mask(row,col-1,code[index])
                         index+=1
             col_dir = not col_dir
 
-    def mask(self,row,col,color):
-        rev= (row+1+col+1) %2 ==0
-        #rev = row%3 ==0
-        if rev:
-           return b if color==w else w
-        return color
-
+    def get_pix_color_with_mask(self,col,row, bit):
+        mask = (col+row) %2 ==0
+        color = 'b' if bit=='1' else 'w'
+        if mask:
+           color = 'w' if color=='b' else 'b'
+        return b() if color=='b' else w()
 
     def add_padding(self,canv,pad_size=4):
         res = np.ones((canv.shape[0]+pad_size*2,canv.shape[1]+pad_size*2,3))
@@ -249,19 +240,8 @@ class QRDrawer:
 
 
 
-
-#d = QRCodeL()
-#r = d.Encode('1')
-#r = d.Encode('HELLO')
-#drawer  = QRDrawer(r,d.version)
-#drawer  = QRDrawer(r,d.version)
-#d.get_finding_pattern()
-
-
-from c import encode
-
-s = 'fly me to the moon'
-v, datacode = encode(1, 'L', s)
-data = ''.join([bin(i)[2:] for i in datacode[0]])
-print(data)
-drawer  = QRDrawer(data,v)
+d = QRCodeL()
+r = d.Encode('HELLO')
+print(r)
+print(d.version)
+drawer  = QRDrawer(r,d.version,'mycode.bmp')
