@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
-from QRTables import leveling_pattern_positions, version_codes
-from QRCode import QRCodeL
+from qr.QRTables import leveling_pattern_positions, version_codes
+
 
 
 def get_bigramms(arr):

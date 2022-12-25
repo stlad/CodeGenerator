@@ -10,7 +10,7 @@ class Code128:
         self.StartC = [[int(i) for i in  '11010011100'],105]
         self.Empty = [0,0,0,0,0,0,0]
 
-        with open("chartB.json", "r") as read_file:
+        with open("code128/chartB.json", "r") as read_file:
             self.chartB = json.load(read_file)
 
         for index, key in enumerate(self.chartB):

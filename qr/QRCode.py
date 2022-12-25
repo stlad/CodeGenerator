@@ -1,4 +1,4 @@
-from QRTables import polinoms, Gauls_Pole,ReverseGaulsField
+from qr.QRTables  import polinoms, Gauls_Pole,ReverseGaulsField
 from copy import copy
 
 class QRCodeL:

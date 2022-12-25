@@ -1,7 +1,6 @@
-from code128 import Code128, DrawCode128
-from QRCode import  QRCodeL
-from QRDrawer import QRDrawer
-import os
+from code128.code128 import Code128, DrawCode128
+from qr.QRCode import  QRCodeL
+from qr.QRDrawer import QRDrawer
 
 texts =[
     'hello world',
